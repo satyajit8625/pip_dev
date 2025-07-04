@@ -2,6 +2,7 @@
 
 import maya.cmds as mc
 import datetime
+from typing import Optional, Dict
 
 class AssetSceneUtils:
     """
@@ -10,8 +11,11 @@ class AssetSceneUtils:
     Provides methods for creating metadata nodes and retrieving asset data.
     """
 
+    def __new__(cls, *args, **kwargs):
+        raise NotImplementedError("AssetSceneUtils is a static utility class and cannot be instantiated.")
+
     @staticmethod
-    def get_asset_data():
+    def get_asset_data() -> Dict[str, str]:
         """
         Retrieves metadata from the only metadata node in the Maya scene.
 
@@ -34,7 +38,6 @@ class AssetSceneUtils:
             raise RuntimeError("No metadata node found in the scene.")
 
         if len(metadata_nodes) > 1:
-            print("this is line")
             mc.warning(f"Multiple metadata nodes found in the scene: {metadata_nodes}")
 
         asset_node = metadata_nodes[0]
@@ -49,7 +52,17 @@ class AssetSceneUtils:
         return asset_data
 
     @staticmethod
-    def create_new_asset(department, asset_type, asset_name, creator_name, publisher_name):
+    def create_new_asset(
+        department: str,
+        asset_type: str,
+        asset_name: str,
+        creator_name: str,
+        publisher_name: str,
+        project_name: str = "DefaultProject",
+        status: str = "Draft",
+        version: str = "v001",
+        publish_path: str = "N/A"
+    ) -> Optional[str]:
         """
         Creates a new network node in Maya to store metadata for a new asset.
 
@@ -63,15 +76,31 @@ class AssetSceneUtils:
             asset_name (str): Unique asset name.
             creator_name (str): Creator of the asset.
             publisher_name (str): Publisher of the asset.
+            project_name (str, optional): Project name. Defaults to "DefaultProject".
+            status (str, optional): Asset status. Defaults to "Draft".
+            version (str, optional): Asset version. Defaults to "v001".
+            publish_path (str, optional): Publish path. Defaults to "N/A".
 
         Returns:
             str: The name of the created network node if successful, None otherwise.
 
         Raises:
-            RuntimeError: If any metadata node already exists in the scene.
+            RuntimeError: If any metadata node already exists in the scene or parameters are invalid.
         """
+        # Parameter validation
+        for param, value in {
+            'department': department,
+            'asset_type': asset_type,
+            'asset_name': asset_name,
+            'creator_name': creator_name,
+            'publisher_name': publisher_name
+        }.items():
+            if not value:
+                mc.error(f"Parameter '{param}' is required and cannot be empty.")
+                return None
+
         base_network_node_name = f"{asset_name}_metadata_node"
-        print(f"{asset_name} is being created...")
+        mc.info(f"Creating asset metadata node: {base_network_node_name}")
 
         # === Check if any metadata node already exists ===
         existing_metadata_nodes = [node for node in mc.ls(type='network') if node.endswith('_metadata_node')]
@@ -80,22 +109,20 @@ class AssetSceneUtils:
 
         try:
             network_node = mc.createNode("network", name=base_network_node_name)
-            print(f"Created network node: '{network_node}'")
+            mc.info(f"Created network node: '{network_node}'")
         except RuntimeError as e:
             mc.error(f"Failed to create network node '{base_network_node_name}': {e}")
             return None
 
         # Generate attribute values
         current_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        version = "v001"
-        publish_path = "N/A"
 
         attributes = {
             "asset_name": asset_name,
             "asset_type": asset_type,
             "department": department,
-            "project_name": "DefaultProject",
-            "status": "Draft",
+            "project_name": project_name,
+            "status": status,
             "creator_name": creator_name,
             "publisher_name": publisher_name,
             "creation_date": current_date,
@@ -118,6 +145,6 @@ class AssetSceneUtils:
 
         # Select node
         mc.select(network_node)
-        print(f"Network node '{network_node}' created with metadata.")
+        mc.info(f"Network node '{network_node}' created with metadata.")
 
         return network_node

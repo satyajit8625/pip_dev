@@ -1,7 +1,7 @@
 from PySide2 import QtWidgets, QtCore, QtGui
 from shiboken2 import wrapInstance
 import maya.OpenMayaUI as omui
-import maya.cmds as cmds
+import maya.cmds as mc
 import importlib
 import tempfile
 import os
@@ -9,9 +9,10 @@ import os
 # Import and reload utility modules
 import asset_scene_utils as asset_scene_utils_module
 import user_utils as user_utils_module
-
+import file_utils as file_utils_module
 importlib.reload(asset_scene_utils_module)
 importlib.reload(user_utils_module)
+importlib.reload(file_utils_module)
 
 from asset_scene_utils import AssetSceneUtils
 from user_utils import UserUtils
@@ -61,7 +62,7 @@ class CreateAssetDialog(QtWidgets.QDialog):
         self.asset_name_input.setPlaceholderText("Enter asset name")
 
         self.asset_type_dropdown = QtWidgets.QComboBox()
-        self.asset_type_dropdown.addItems(["Character", "Prop", "Vehicle", "Environment", "Other"])
+        self.asset_type_dropdown.addItems(["character", "prop", "vehicle", "environment", "other"])
         self.asset_type_dropdown.setMinimumHeight(32)
 
         form_layout = QtWidgets.QFormLayout()
@@ -122,13 +123,13 @@ class AssetPublisherUI(QtWidgets.QWidget):
         artist_name = os.environ.get("USERNAME") or os.environ.get("USER") or "JohnDoe"
         publish_path = os.path.join(os.path.dirname(scene_path), "publish")
 
-        metadata = self.load_asset_metadata()
-        asset_name = metadata.get("asset_name", os.path.splitext(scene_file)[0])
-        asset_type = metadata.get("asset_type", "Unknown")
-        version = metadata.get("version", "v001")
-        creator = metadata.get("creator_name", artist_name)
-        publish_dir = metadata.get("publish_path", publish_path)
-        self.department = metadata.get("department", "Unknown")
+        self.metadata = self.load_asset_metadata()
+        self.asset_name = self.metadata.get("asset_name", os.path.splitext(scene_file)[0])
+        self.asset_type = self.metadata.get("asset_type", "Unknown")
+        self.version = self.metadata.get("version", "v001")
+        self.creator = self.metadata.get("creator_name", artist_name)
+        self.publish_dir = self.metadata.get("publish_path", publish_path)
+        self.department = self.metadata.get("department", "Unknown")
 
         # Top bar
         top_row = QtWidgets.QHBoxLayout()
@@ -170,7 +171,7 @@ class AssetPublisherUI(QtWidgets.QWidget):
         dept_label.setStyleSheet("font-weight: bold; font-size: 11pt;")
 
         self.department_dropdown = QtWidgets.QComboBox()
-        self.department_dropdown.addItems(["Model", "Rig", "Animation", "Lookdev", "Layout", "FX"])
+        self.department_dropdown.addItems(["modeling", "rigging", "animation", "lookdev", "layout", "fx"])
         self.department_dropdown.setCurrentText(self.department)
         self.department_dropdown.setFixedHeight(34)
         self.department_dropdown.setMinimumWidth(480)
@@ -218,11 +219,11 @@ class AssetPublisherUI(QtWidgets.QWidget):
 
         # Metadata labels
         info_fields = {
-            "Asset Name": asset_name,
-            "Asset Type": asset_type,
-            "Version": version,
-            "Artist": creator,
-            "Publish Path": publish_dir
+            "Asset Name": self.asset_name,
+            "Asset Type": self.asset_type,
+            "Version": self.version,
+            "Artist": self.creator,
+            "Publish Path": self.publish_dir
         }
         self.metadata_labels = {}
         for key, value in info_fields.items():
@@ -327,13 +328,26 @@ class AssetPublisherUI(QtWidgets.QWidget):
         if not comment:
             QtWidgets.QMessageBox.warning(self, "Missing Comment", "Please enter a publish comment.")
             return
+        publish_dir = file_utils_module.DirectoryUtils.create_publish_dir_structure(
+        project_root="E:/projects/showreel_2025",
+        asset_name=self.asset_name,
+        department=selected_department,
+        asset_type=self.asset_type,
+        format_type="ma"
+        )
 
-        msg = f"Publishing to {selected_department} department with comment:\n{comment}"
-        if self.preview_image_path:
-            msg += f"\nPreview Image: {self.preview_image_path}"
 
-        QtWidgets.QMessageBox.information(self, "Publish Asset", msg)
+        if not publish_dir:
+            cmds.error("Failed to create publish directory.")
 
+        file_name = f"{self.asset_name}_{selected_department}_{self.version}.ma"
+        full_publish_path = os.path.join(publish_dir, file_name).replace("\\", "/")
+
+        cmds.file(rename=full_publish_path)
+        cmds.file(save=True, type="mayaAscii")
+
+        print(f"✅ published to {selected_department} department with comment:\n{comment}")
+       
     def load_asset_metadata(self):
         """Load and return asset metadata from the scene."""
         try:
