@@ -136,11 +136,12 @@ importlib.reload(asset_maneger_ui)
 asset_maneger_ui.show()
 ```
 
-![Asset Publisher Tool](asset_maneger/publish_tool/images/asset_publish_tool_02.PNG)
-> The tool displays asset name, type, version, artist, and a preview image generated via playblast.
+![Asset Publisher UI](asset_maneger/publish_tool/images/main_ui.PNG)
+> The main UI for asset publishing, with metadata display and preview capture.
 
-![UI with Create New Asset](asset_maneger/publish_tool/images/ui_with_create_new_asset.PNG)
-> This image shows the UI with the "Create New Asset" section visible.
+
+![Create New Asset UI](asset_maneger/publish_tool/images/ui_with_create_new_asset.PNG)
+> This shows the 'Create New Asset' popup with asset type and name inputs.
 
 🧠 Internal Logic Highlights
 If no metadata exists, it creates metadata node and default JSON
