@@ -134,13 +134,14 @@ import importlib
 import publish_tool.asset_maneger_ui as asset_maneger_ui
 importlib.reload(asset_maneger_ui)
 asset_maneger_ui.show()
+```
 
 ![Asset Publisher Tool](asset_maneger/publish_tool/images/asset_publish_tool_02.PNG)
 > The tool displays asset name, type, version, artist, and a preview image generated via playblast.
 
 ![UI with Create New Asset](asset_maneger/publish_tool/images/ui_with_create_new_asset.PNG)
 > This image shows the UI with the "Create New Asset" section visible.
-```
+
 🧠 Internal Logic Highlights
 If no metadata exists, it creates metadata node and default JSON
 
