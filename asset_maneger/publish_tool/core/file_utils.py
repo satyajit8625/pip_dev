@@ -1,5 +1,6 @@
 import os
 import logging
+from typing import Optional, Tuple
 
 class DirectoryUtils:
     @staticmethod
@@ -29,16 +30,19 @@ class DirectoryUtils:
         department: str,
         asset_type: str,
         format_type: str
-    ) -> str:
+    ) -> Optional[Tuple[str, str, str]]:
         """
         Creates a nested directory structure for publishing an asset in a VFX pipeline.
 
         Final structure:
             <project_root>/
                 publish/
-                    <asset_name>/
-                        <department>/
-                            <asset_type>/
+                    <asset_type>/
+                        <asset_name>/
+                            <department>/
+                                data/
+                                    metadata/
+                                    preview_image/
                                 <format_type>/
 
         Args:
@@ -49,26 +53,52 @@ class DirectoryUtils:
             format_type (str): Output format folder (e.g., 'ma', 'usd', 'abc')
 
         Returns:
-            str: Full final path to the format_type folder, or None on failure.
+            Optional[Tuple[str, str, str]]: A tuple containing the full paths to the
+            format_type, metadata, and preview_image folders, or None on failure.
         """
+
         # Input validation
-        if not all([project_root, asset_name, department, asset_type, format_type]):
+        if not all([project_root, asset_type, asset_name, department, format_type]):
             logging.error("[DirectoryUtils] One or more required arguments are empty.")
             return None
 
-        path_chain = [
+        # Base path up to the department level
+        base_path_chain = [
             "publish",
-            asset_name,
-            department,
             asset_type,
-            format_type
+            asset_name,
+            department
         ]
 
-        current_path = project_root
-        for folder in path_chain:
-            current_path = DirectoryUtils.create_dir(current_path, folder)
-            if not current_path:
+        department_path = project_root
+        for folder in base_path_chain:
+            department_path = DirectoryUtils.create_dir(department_path, folder)
+            if not department_path:
                 logging.error(f"[DirectoryUtils] Failed to create directory at step: {folder}")
-                return None  # Stop if any folder creation fails
-        
-        return current_path
+                return None
+
+        # Create the format_type directory
+        file_publish_path = DirectoryUtils.create_dir(department_path, format_type)
+        if not file_publish_path:
+            logging.error(f"[DirectoryUtils] Failed to create format_type directory.")
+            return None
+
+        # Create the data directory and its subdirectories
+        data_path = DirectoryUtils.create_dir(department_path, "data")
+        if not data_path:
+            logging.error(f"[DirectoryUtils] Failed to create data directory.")
+            return None
+
+        metadata_path = DirectoryUtils.create_dir(data_path, "metadata")
+        if not metadata_path:
+            logging.error(f"[DirectoryUtils] Failed to create metadata directory.")
+            return None
+
+        preview_image_path = DirectoryUtils.create_dir(data_path, "preview_image")
+        if not preview_image_path:
+            logging.error(f"[DirectoryUtils] Failed to create preview_image directory.")
+            return None
+
+        return file_publish_path, metadata_path, preview_image_path
+
+
